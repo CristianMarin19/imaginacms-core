@@ -28,14 +28,14 @@ trait HasCacheClearable
    *
    * @return void
    */
-  public function initCacheClearable($validateIadmin = true)
+  public function initCacheClearable()
   {
-    $fromAdmin = false;
+    $clearResponseCache = true;
     if (!is_null(request()->input('setting'))) {
       $settingsRequest = json_decode(request()->input('setting'));
-      $fromAdmin = $settingsRequest->fromAdmin ?? false;
+      $clearResponseCache = $settingsRequest->noClearResponseCache ?? true;
     }
-    if (!$validateIadmin || $fromAdmin) {
+    if ($clearResponseCache) {
       if (method_exists($this, 'getCacheClearableData')) {
         ClearCacheByRoutes::dispatch($this)->onQueue('cacheByRoutes');
         ClearCacheWithCDN::dispatch($this);
