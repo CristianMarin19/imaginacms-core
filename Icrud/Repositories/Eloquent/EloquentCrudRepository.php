@@ -140,14 +140,22 @@ abstract class EloquentCrudRepository extends EloquentBaseRepository implements 
     } else if ($filterWhere == 'orWhere') {
       $query->orWhere($fieldName, $filterOperator, $filterValue);
     } else if ($filterWhere == 'belongsToMany') {
+      $filterValue = (array)$filterValue;
       //Sub query to get data by pivot
-      if (is_array($filterValue) && count($filterValue)) {
-        $query->whereIn('id', function ($q) use ($filterData, $filterValue) {
-          //validate filter value
-          if (!is_array($filterValue)) $filterValue = [$filterValue];
-          //filter sub query
-          $q->select($filterData->foreignPivotKey)->from($filterData->table)
-            ->whereIn($filterData->relatedPivotKey, $filterValue);
+      if (count($filterValue)) {
+        $relationName = $fieldName[0];
+        $foreignKey = $this->model->$relationName()->getRelatedPivotKeyName();
+        $query->whereHas($relationName, function ($q) use ($foreignKey, $filterValue) {
+          $q->whereIn($foreignKey, $filterValue);
+        });
+      }
+    } else if ($filterWhere == 'hasMany') {
+      $filterValue = (array)$filterValue;
+      //Sub query to get data by pivot
+      if (count($filterValue)) {
+        $relatedFieldName = camelToSnake($fieldName[1] ?? 'id');
+        $query->whereHas($fieldName[0], function ($q) use ($relatedFieldName, $filterValue) {
+          $q->whereIn($relatedFieldName, $filterValue);
         });
       }
     } else {
@@ -212,6 +220,7 @@ abstract class EloquentCrudRepository extends EloquentBaseRepository implements 
       if (is_string($value)) $modelRelations[$name] = ['relation' => $value];
       else if (is_array($value) && isset($value['relation'])) $modelRelations[$name] = $value;
     }
+
     return $modelRelations;
   }
 
@@ -227,7 +236,7 @@ abstract class EloquentCrudRepository extends EloquentBaseRepository implements 
       // Check if exist relation in data
       if (!in_array($relationName, $this->replaceSyncModelRelations) && array_key_exists($relationName, $data)) {
         //Sync as updateOrCreateMany
-        if ($relation['type'] == 'updateOrCreateMany') {
+        if (($relation['type'] ?? null) == 'updateOrCreateMany') {
           if (isset($relation['compareKeys']) && is_array($relation['compareKeys'])) {
             //Instance the relation
             $relationInstance = $model->$relationName();
@@ -405,14 +414,12 @@ abstract class EloquentCrudRepository extends EloquentBaseRepository implements 
               $query = $this->setFilterQuery($query, $filterValue, $filterNameSnake);
             }
             //Add relation filter
-            if (in_array($filterName, array_keys($modelRelations))) {
+            $relationPath = explode('.', $filterName);
+            if (in_array($relationPath[0], array_keys($modelRelations))) {
               $query = $this->setFilterQuery($query, (object)[
-                'where' => $modelRelations[$filterName]['relation'],
-                'table' => $this->model->$filterName()->getTable(),
-                'foreignPivotKey' => $this->model->$filterName()->getForeignPivotKeyName(),
-                'relatedPivotKey' => $this->model->$filterName()->getRelatedPivotKeyName(),
+                'where' => $modelRelations[$relationPath[0]]['relation'],
                 'value' => $filterValue
-              ], $filterName);
+              ], $relationPath);
             }
           }
         }

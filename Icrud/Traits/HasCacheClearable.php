@@ -13,6 +13,7 @@ trait HasCacheClearable
     static::created(function ($model) {
       $model->initCacheClearable();
     });
+    
     static::saved(function ($model) {
       if ($model->wasRecentlyCreated) return; //Validate saved only for updated model
       $model->initCacheClearable();
