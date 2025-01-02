@@ -13,10 +13,12 @@ class ScheduleServiceProvider extends ServiceProvider
         $this->app->booted(function () {
 
             $schedule = $this->app->make(Schedule::class);
-
+            
+            /*
             $schedule->call(function () {
                 \Modules\Core\Jobs\ClearJobsCacheClearable::dispatch();
             })->hourly();
+            */
 
         });
 

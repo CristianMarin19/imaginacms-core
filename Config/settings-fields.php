@@ -83,4 +83,16 @@ return [
       
     ],
   ],
+  'chunkSizeToBulkProcess' => [
+    "onlySuperAdmin" => true,
+    'value' => 100,
+    'name' => 'core::chunkSizeToBulkProcess',
+    'type' => 'input',
+    'groupName' => 'baseCrud',
+    'groupTitle' => 'core::settings.baseCrud.title',
+    'props' => [
+      'label' => 'core::settings.baseCrud.chunkSize',
+      'type' => 'number',
+    ]
+  ],
 ];

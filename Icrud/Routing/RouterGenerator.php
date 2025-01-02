@@ -121,6 +121,15 @@ class RouterGenerator
           'uses' => $params['controller'] . "@bulkOrder",
           'middleware' => isset($params['middleware']['order']) ? $params['middleware']['order'] : ['auth:api']
         ]
+      ],
+      (object)[//Route bulk 
+        'method' => 'post',
+        'path' => '/bulk/',
+        'actions' => [
+          'as' => "api.{$params['module']}.{$params['prefix']}.bulk",
+          'uses' => $params['controller'] . "@bulk",
+          'middleware' => $this->getApiRouteMiddleware('bulk', $params)
+        ]
       ]
     ];
   }
@@ -185,6 +194,7 @@ class RouterGenerator
       'update' => "$prefix.edit",
       'delete' => "$prefix.destroy",
       'restore' => "$prefix.restore",
+      'bulk' => "$prefix.bulk",
     ];
 
     $defaultRouteMiddleware = ["auth:api"];

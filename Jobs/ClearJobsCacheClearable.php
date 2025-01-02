@@ -37,14 +37,8 @@ class ClearJobsCacheClearable implements ShouldQueue
         $deleted = \DB::table('jobs') ->where('queue', 'cacheByRoutes') ->delete();
         \Log::info($this->log."Deleted: ".$deleted);
 
-        \Log::info($this->log."ClearAllResponseCache");
-        ClearAllResponseCache::dispatch(['force' => true]);
-
-        //Clean Homepage
-        $url = url('/');
-        $client = new \GuzzleHttp\Client();
-        $promise = $client->get($url, ['headers' => ['icache-bypass' => 1]]);
-        \Log::info('Route Update Cache: '. $url);
+        //Apply ClearAllResponseCache (JOB) and clean the home
+        initProcessCache();
             
     }
 

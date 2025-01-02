@@ -1,5 +1,6 @@
 <?php
 
+
 if (! function_exists('on_route')) {
     function on_route($route)
     {
@@ -81,4 +82,55 @@ if (! function_exists('camelToSnake')) {
     }
     return implode('_', $ret);
   }
+}
+
+/**
+ * Used by: ClearJobsCacheClearable (JOB) ,  ProcessBulkItems (JOB)
+ */
+if (! function_exists('initProcessCache')) {
+    function initProcessCache()
+    {
+        \Log::info("Core::Helper||initProcessCache");
+
+        \Modules\Core\Jobs\ClearAllResponseCache::dispatch(['force' => true]);
+
+        //Clean Homepage
+        $url = url('/');
+        $client = new \GuzzleHttp\Client();
+        $promise = $client->get($url, ['headers' => ['icache-bypass' => 1]]);
+        \Log::info('Route Update Cache: '. $url);
+    }
+}
+
+/**
+ * Generate testing data to test API BULK
+ */
+if (! function_exists('generateTestingData')) {
+    function generateTestingData($n)
+    {
+        \Log::info("Core::Helper||generateTestingData");
+
+        //Testing Data
+        $products = [];
+        for ($i = 1; $i <= $n; $i++) {
+            $products[] = [
+                'es' => [
+                    'name' => 'Producto ' . $i,
+                    'slug' => 'producto-' . $i,
+                    'summary' => 'Esto es una prueba',
+                    'description' => 'esta es una prueba'
+                ],
+                'category_id' => 1,
+                'quantity' => 9999,
+                'price' => '15000',
+                'productWarehouses' => [
+                    [
+                        'warehouse_id' => 2,
+                        'quantity' => 10,
+                    ],
+                ],
+            ];
+        }
+        return $products;
+    }
 }
