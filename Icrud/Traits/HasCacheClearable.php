@@ -13,7 +13,7 @@ trait HasCacheClearable
     static::created(function ($model) {
       $model->initCacheClearable();
     });
-    
+
     static::saved(function ($model) {
       if ($model->wasRecentlyCreated) return; //Validate saved only for updated model
       $model->initCacheClearable();
@@ -35,7 +35,7 @@ trait HasCacheClearable
     if ($clearResponseCache) {
       if (method_exists($this, 'getCacheClearableData')) {
         ClearCacheByRoutes::dispatch($this)->onQueue('cacheByRoutes');
-        ClearCacheWithCDN::dispatch($this);
+        ClearCacheWithCDN::dispatch($this)->onQueue('cacheByRoutes');
         ClearAllResponseCache::dispatch(['entity' => $this]);
       }
     }
