@@ -36,11 +36,17 @@ class ClearCacheByRoutes implements ShouldQueue
   public function handle()
   {
     $client = new \GuzzleHttp\Client();
+    $domain = preg_replace("(^https?://)", "", config("app.url"));
+
     if (!empty($this->urls)) {
+      \Log::info(">>>>> " . json_encode($this->urls));
       foreach ($this->urls as $url) {
         try {
           \Log::info('CACHE::RUNING ' . $url);
-          $promise = $client->get($url, ['headers' => ['icache-bypass' => 1]]);
+          $promise = $client->get($url, [
+            'headers' => ['icache-bypass' => 1],
+            'curl' => [CURLOPT_RESOLVE => ["$domain:80:127.0.0.1"]]
+          ]);
           \Log::info('CACHE::DONE ' . $url);
         }catch (\Exception $e){
           \Log::info('CACHE::FAILED' . ($url ?? 'no url'). ' --> ' . $e->getMessage());
