@@ -67,7 +67,7 @@ class ClearCacheByRoutes implements ShouldQueue
     $response = null;
     if (method_exists($this->entity, 'getCacheClearableData')) {
       $cacheClearableData = $this->entity->getCacheClearableData();
-      $response = $cacheClearableData[$type] ?? null;
+      $response = $cacheClearableData[$type] ?? [];
       $baseUrl = config("app.url");
       //Move the base url to the end (home is expencive to load time)
       if (($baseUrlKey = array_search($baseUrl, $response)) !== false) {
