@@ -25,8 +25,8 @@ class ClearCacheModelsWithAvailableDate implements ShouldQueue
     foreach ($models as $model) {
       if (!empty($model)) {
         $hoy = date_format(now(), 'Y-m-d');
-        $itemRepository = app($model['Repo']);
-        $params = ['filter' => [$model['Field'] => ['where' => 'date', 'value' => $hoy]]];
+        $itemRepository = app($model['repo']);
+        $params = ['filter' => [$model['field'] => ['where' => 'date', 'value' => $hoy]]];
         $items = $itemRepository->getItemsBy($params);
         foreach ($items as $item) {
           $item->initCacheClearable();
