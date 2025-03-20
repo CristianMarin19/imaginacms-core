@@ -235,50 +235,75 @@ abstract class EloquentCrudRepository extends EloquentBaseRepository implements 
     foreach ($this->getModelRelations() as $relationName => $relation) {
       // Check if exist relation in data
       if (!in_array($relationName, $this->replaceSyncModelRelations) && array_key_exists($relationName, $data)) {
-        //Sync as updateOrCreateMany
-        if (($relation['type'] ?? null) == 'updateOrCreateMany') {
-          if (isset($relation['compareKeys']) && is_array($relation['compareKeys'])) {
-            //Instance the relation
-            $relationInstance = $model->$relationName();
-            // Get the related repository
-            $relatedRepository = $relationInstance->getRelated()->repository ?? null;
-            // Dynamically determine the foreign key for the relation
-            $foreignKey = $relation['foreignKey'] ?? (method_exists($relationInstance, 'getForeignKeyName')
-              ? $relationInstance->getForeignKeyName()
-              : null);
+        $relationInstance = $model->$relationName();//Instance the relation
+        $relationType = $relation['type'] ?? null;//Validate instances
+        $updateOrCreate = $relationType === 'updateOrCreateMany';//Check if updateOrCreate
+        $compareKeys = $relation['compareKeys'] ?? [];//Get the compare keys
 
-            if ($relatedRepository && $foreignKey) {
-              //Init the related repository
-              $relatedRepository = app($relatedRepository);
-              //update or create each related record
-              foreach ($data[$relationName] as $item) {
-                // Validate that all compare keys exist in the item
-                $missingKeys = array_diff($relation['compareKeys'], array_keys($item));
-                //Validate
-                if (empty($missingKeys)) {
+        //Default laravel relation
+        switch ($relation['relation']) {
+          case 'hasMany':
+            if ($updateOrCreate) {
+              // Get the related repository
+              $relatedRepository = $relationInstance->getRelated()->repository ?? null;
+              // Dynamically determine the foreign key for the relation
+              $foreignKey = $relationInstance->getForeignKeyName();
+
+              if ($relatedRepository && $foreignKey) {
+                //Init the related repository
+                $relatedRepository = app($relatedRepository);
+                //update or create each related record
+                foreach ($data[$relationName] as $item) {
+                  if (!empty(array_diff($compareKeys, array_keys($item)))) continue; // Skip if missing keys
                   // Build the comparison array dynamically
-                  $compare = array_merge([$foreignKey => $model->id], array_intersect_key($item, array_flip($relation['compareKeys'])));
+                  $compare = array_merge([
+                    $foreignKey => $model->id],
+                    array_intersect_key($item, array_flip($compareKeys))
+                  );
                   // Use updateOrCreate with the dynamic compare keys
                   $relatedRepository->updateOrCreate($compare, $item);
                 }
               }
+            } else {
+              // Validate if exist relation with items
+              $model->$relationName()->forceDelete();
+              // Create and Set relation to Model
+              $model->setRelation($relationName, $model->$relationName()->createMany($data[$relationName]));
             }
-          }
-          break;
-        }
-        //Default laravel relation
-        switch ($relation['relation']) {
-          // Sync Has Many relation
-          case 'hasMany':
-            // Validate if exist relation with items
-            $model->$relationName()->forceDelete();
-            // Create and Set relation to Model
-            $model->setRelation($relationName, $model->$relationName()->createMany($data[$relationName]));
             break;
-          // Sync Belongs to many relation
           case 'belongsToMany':
-            $model->$relationName()->sync($data[$relationName]);
-            $model->setRelation($relationName, $model->$relationName);
+            if ($updateOrCreate) {
+              $pivotTable = $relationInstance->getTable(); // Pivot table name
+              $foreignKey = $relationInstance->getRelatedPivotKeyName(); // Foreign key in pivot
+              $modelForeignKey = $relationInstance->getForeignPivotKeyName(); // Foreign key in pivot
+
+              if ($pivotTable && $foreignKey && $modelForeignKey) {
+                //update or create each related record
+                foreach ($data[$relationName] as $item) {
+                  // Validate required keys
+                  if (!isset($item[$foreignKey]) || !empty(array_diff($compareKeys, array_keys($item)))) continue;
+
+                  $relatedId = $item[$foreignKey]; // Get related ID dynamically
+                  unset($item[$foreignKey]); // Remove related ID from pivot data
+
+                  // Build lookup keys for update
+                  $lookupKeys = array_merge(
+                    [$modelForeignKey => $model->id, $foreignKey => $relatedId],
+                    array_intersect_key($item, array_flip($compareKeys))
+                  );
+
+                  // Update if exists, insert if not
+                  \DB::table($pivotTable)->updateOrInsert(
+                    $lookupKeys,
+                    array_merge($item, ['updated_at' => now(), 'created_at' => now()])
+                  );
+                }
+                $model->setRelation($relationName, $model->$relationName);
+              }
+            } else {
+              $model->$relationName()->sync($data[$relationName]);
+              $model->setRelation($relationName, $model->$relationName);
+            }
             break;
         }
       }
