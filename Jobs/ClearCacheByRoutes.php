@@ -39,8 +39,10 @@ class ClearCacheByRoutes implements ShouldQueue
     if (!empty($this->urls)) {
       foreach ($this->urls as $url) {
         try {
-          $promise = $client->get($url, ['headers' => ['icache-bypass' => 1]]);
-          \Log::info('Route Update Cache: ' . $url);
+          if (!empty($url)) {
+            $promise = $client->get($url, ['headers' => ['icache-bypass' => 1]]);
+            \Log::info('Route Update Cache: ' . $url);
+          }
         } catch (\Exception $e) {
           \Log::error("Route Update Cache: Error $url - " . $e->getMessage());
         }
